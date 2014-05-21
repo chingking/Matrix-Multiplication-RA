@@ -1,18 +1,13 @@
 package matrixFormat;
 
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
+
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
@@ -20,13 +15,13 @@ import org.apache.hadoop.mapreduce.lib.input.*;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.LineReader;
 
-public class SparseMatrixInputFormat extends FileInputFormat<Text, DoubleArrayWritable>
+public class SparseMatrixInputFormat extends FileInputFormat<LongArrayWritable, DoubleArrayWritable>
 {
 	private static final Log LOG = LogFactory.getLog(FileInputFormat.class);
 	private static final double SPLIT_SLOP = 1.1;   // 10% slop
 	static final String NUM_INPUT_FILES = "mapreduce.input.num.files"; // Normally, it's 2
 	
-	public RecordReader<Text, DoubleArrayWritable> createRecordReader(InputSplit input, TaskAttemptContext tac) throws IOException 
+	public RecordReader<LongArrayWritable, DoubleArrayWritable> createRecordReader(InputSplit input, TaskAttemptContext tac) throws IOException 
 	{
 		tac.setStatus(input.toString());
 		return new MatrixRecordReader();

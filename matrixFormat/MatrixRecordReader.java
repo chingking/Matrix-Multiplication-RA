@@ -17,35 +17,24 @@ package matrixFormat;
  * limitations under the License.
  */
 
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.filecache.DistributedCache;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.Seekable;
-import org.apache.hadoop.io.IntWritable;
-import org.apache.hadoop.io.LongWritable;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.compress.CodecPool;
 import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.CompressionCodecFactory;
 import org.apache.hadoop.io.compress.Decompressor;
-import org.apache.hadoop.io.compress.SplitCompressionInputStream;
-import org.apache.hadoop.io.compress.SplittableCompressionCodec;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.util.LineReader;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
-import org.apache.hadoop.mapreduce.lib.input.*;
 
-public class MatrixRecordReader extends RecordReader<Text, DoubleArrayWritable> {
+public class MatrixRecordReader extends RecordReader<LongArrayWritable, DoubleArrayWritable> {
 
 	private static final Log LOG = LogFactory.getLog(MatrixRecordReader.class);
 	private CompressionCodecFactory compressionCodecs = null;
@@ -60,7 +49,7 @@ public class MatrixRecordReader extends RecordReader<Text, DoubleArrayWritable> 
 	//private MatrixReader in2;
 	private int maxLength;
 	private int blkID = 0;
-	private Text key = null;
+	private LongArrayWritable key = null;
 	private DoubleArrayWritable value = null;
 	private Seekable filePosition1;
 	private Seekable filePosition2;
@@ -167,7 +156,7 @@ public class MatrixRecordReader extends RecordReader<Text, DoubleArrayWritable> 
 
   public boolean nextKeyValue() throws IOException {
     if (key == null) {
-      key = new Text();
+      key = new LongArrayWritable();
     }
     
     if (value == null) {
@@ -194,7 +183,7 @@ public class MatrixRecordReader extends RecordReader<Text, DoubleArrayWritable> 
   }
 
   @Override
-  public Text getCurrentKey() {
+  public LongArrayWritable getCurrentKey() {
     return key;
   }
 

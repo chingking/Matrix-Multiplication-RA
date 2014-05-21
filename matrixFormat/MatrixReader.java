@@ -333,11 +333,11 @@ public class MatrixReader {
 	private FSDataInputStream tmpFSIS;
 	private boolean isReadyLocalB = false;*/
 
-	public int getIPBlock(Text key, DoubleArrayWritable value) throws IOException
+	public int getIPBlock(LongArrayWritable key, DoubleArrayWritable value) throws IOException
 	{
 		key.clear();
 		value.clear(blkRow*blkCol*2);
-		key.set(String.format("%09d", start[curAId*blkRow])+"_"+curBIdC);
+		key.set(String.format("%09d", start[curAId*blkRow])+" "+curBIdC);
 		if (curBIdC >= (int)Math.ceil((double)rowLength/blkRow))
 			return 0;
 		//Fetch first block from A
@@ -374,10 +374,12 @@ public class MatrixReader {
 	
 	public boolean ensureMemory()
 	{
+		//System.out.println("ensureMemory: free "+Runtime.getRuntime().freeMemory()+", total "+Runtime.getRuntime().totalMemory()+", max "+Runtime.getRuntime().maxMemory());
+		//System.out.println("to be used: "+(this.bufSizeA+this.bufSizeB));
 		return Runtime.getRuntime().freeMemory() > (this.bufSizeA+this.bufSizeB)*2;
 	}
 	
-	public int getOPBlock(Text key, DoubleArrayWritable value) throws IOException 
+	public int getOPBlock(LongArrayWritable key, DoubleArrayWritable value) throws IOException 
 	{
 		ST=System.currentTimeMillis();
 		//LOG.info("MatrixReader(): Starting fetch a block");
@@ -445,30 +447,31 @@ public class MatrixReader {
 		//System.out.println("getBlock: after second round, "+value.length());
 		return 1;
 	}
-	public int getSpareOPBlock(Text key, DoubleArrayWritable value) throws IOException 
+	public int getSpareOPBlock(LongArrayWritable key, DoubleArrayWritable value) throws IOException 
 	{
 		if (curAId >= blkCol)
 			return 0;
 		key.clear();
 		value.clear();
 		Text tmpVal = new Text();
+		/*int oldA=curAId;
 		do
-		{
+		{*/
 			lr.readLine(tmpVal);
 			value.add(tmpVal.toString());
 			//System.out.println("getSpareOPBlock: From "+start[0]+" A ("+tmpVal.getLength()+"):"+tmpVal.toString());
 			tmpVal.clear();
-			key.set(key.toString()+value.length()+" "); // used to represent the boundary between vectors in a iteration
+			key.add(value.length()); // used to represent the boundary between vectors in a iteration
 			lr2.readLine(tmpVal);
 			//System.out.println("getSpareOPBlock: From "+start2[0]+" B ("+tmpVal.getLength()+"):"+tmpVal.toString());
 			value.add(tmpVal.toString());
-			key.set(key.toString()+value.length()+" "); // used to represent the boundary between iterations 
+			//key.add(value.length()); // used to represent the boundary between iterations 
 			curAId++;
-		} while (ensureMemory() && curAId < blkCol);
-		
+		//} while (ensureMemory() && curAId < blkCol);
+		//System.out.println("getSpareOPBlock: read "+(curAId-oldA)+" lines");
 		return 1;
 	}
-	public int getSpareIPBlock(Text key, DoubleArrayWritable value) throws IOException 
+	public int getSpareIPBlock(LongArrayWritable key, DoubleArrayWritable value) throws IOException 
 	{
 		if (curAId >= blkCol)
 			return 0;
@@ -478,7 +481,7 @@ public class MatrixReader {
 		lr.readLine(tmpVal);
 		value.set(tmpVal.toString());
 		tmpVal.clear();
-		key.set(value.length()+""); // used to represent the boundary between two vector
+		key.add(value.length()); // used to represent the boundary between two vector
 		lr2.readLine(tmpVal);
 		value.add(tmpVal.toString());
 		curBId++;

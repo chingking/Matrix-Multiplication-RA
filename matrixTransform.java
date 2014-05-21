@@ -116,13 +116,14 @@ public class matrixTransform  extends Configured implements Tool
 		conf.set("mapred.reduce.slowstart.completed.maps", "0.8");
 		conf.set("outputfilename", args[0]+".sparse");
 		conf.set("method", args[0]);
-		boolean CSR=(args[0].compareTo("OPB")==0)?false:true; //CSR: Compressed Sparse Row; otherwise, Compressed Sparse Column
+		boolean CSR=(args[0].compareTo("OPB")==0)?true:false; //CSR: Compressed Sparse Row; otherwise, Compressed Sparse Column
+		//Generally, CSR require less time to complete. Therefore, submit CSR job first, then immediately submit CSC job
 		conf.setBoolean("CSR",CSR);
 		int good = 0;
-		for (int i=1 ; i<args.length ; i++)
+		for (int i=args.length-1 ; i>0 ; i--)
 		{
 			conf.setBoolean("CSR",CSR);
-			Job job = new Job(conf, "matrixTransform_"+args[i]);
+			Job job = new Job(conf, "matrixTransform_"+((CSR)?"CSR_":"CSC_")+args[i]);
 			job.setJarByClass(matrixTransform.class);
 	
 			job.setMapOutputKeyClass(LongWritable.class);
@@ -139,10 +140,10 @@ public class matrixTransform  extends Configured implements Tool
 			job.setOutputFormatClass(TextOutputFormat.class);
 			TextInputFormat.addInputPath(job, new Path(args[i]));
 			TextOutputFormat.setOutputPath(job, new Path(args[i]+"_sparse"));
-		
-			//if (i==1)
-			//	job.submit();
-			//else
+			//Generally, CSR require less time to complete. Therefore, submit CSR job first, then immediately submit CSC job
+			if (i==args.length-1)
+				job.submit();
+			else
 			{
 				good = (job.waitForCompletion(true))?1:0;
 				if(good==0)

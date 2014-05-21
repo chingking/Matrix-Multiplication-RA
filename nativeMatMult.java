@@ -1,7 +1,5 @@
 
 import java.io.*;
-import java.net.URI;
-import java.util.*;
 import java.lang.instrument.Instrumentation;
 
 import org.apache.commons.logging.Log;
@@ -10,16 +8,9 @@ import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.ClusterStatus;
-import org.apache.hadoop.mapred.RunningJob;
 import org.apache.hadoop.mapreduce.*;
-import org.apache.hadoop.mapreduce.lib.*;
 import org.apache.hadoop.util.*;
-import org.apache.hadoop.mapreduce.lib.input.*;
-import org.apache.hadoop.mapreduce.lib.output.*;
-import org.apache.hadoop.mapreduce.lib.partition.*;
-import org.apache.hadoop.mapreduce.Counters;
-import org.apache.hadoop.mapred.Task;
+
 
 import matrixFormat.*;
 
@@ -46,7 +37,7 @@ public class nativeMatMult extends Configured implements Tool
 	        MAP_COMPUTATION_TIME,
 	        MAP_IO_TIME 
 	}  
-	public static class Map extends Mapper<Text, DoubleArrayWritable, Text, DoubleArrayWritable>
+	public static class Map extends Mapper<LongArrayWritable, DoubleArrayWritable, LongArrayWritable, DoubleArrayWritable>
 	{
 		private static final Log LOG = LogFactory.getLog(Map.class);
 		private int blkRow, blkCol, blkBCol;
@@ -86,7 +77,7 @@ public class nativeMatMult extends Configured implements Tool
 		}
 		
 		// Map is responsible for multiplying two small matrix
-		public void map(Text key, DoubleArrayWritable value, Context context) throws IOException, InterruptedException
+		public void map(LongArrayWritable key, DoubleArrayWritable value, Context context) throws IOException, InterruptedException
 		{
 			System.out.println("map(): R*C = "+blkRow+" * "+blkCol+" with key "+key.toString()+", value length "+value.length());
 			value.printMatrix(blkRow,blkCol,blkBCol);
@@ -120,7 +111,7 @@ public class nativeMatMult extends Configured implements Tool
 		}
 	}
 	
-	public static class Reduce extends Reducer<Text, DoubleArrayWritable, NullWritable, DoubleArrayWritable> 
+	public static class Reduce extends Reducer<LongArrayWritable, DoubleArrayWritable, NullWritable, DoubleArrayWritable> 
 	{
 		private static final Log LOG = LogFactory.getLog(Reduce.class);
 		private DoubleArrayWritable out = new DoubleArrayWritable(), pout = new DoubleArrayWritable();
@@ -136,9 +127,9 @@ public class nativeMatMult extends Configured implements Tool
 				doSum = true;
 			//blkCol = context.getConfiguration().getInt("blkCol",0);
 		}
-		protected void reduce(Text key, Iterable<DoubleArrayWritable> values, Context context) throws IOException, InterruptedException
+		protected void reduce(LongArrayWritable key, Iterable<DoubleArrayWritable> values, Context context) throws IOException, InterruptedException
 		{
-			Runtime rt = Runtime.getRuntime();
+			//Runtime rt = Runtime.getRuntime();
 			//LOG.info("Reduce.run(): Starting Reduce with "+rt.freeMemory()+" in "+rt.totalMemory()+" and "+rt.maxMemory());
 			//System.out.println("reduce(): R*C = "+blkRow+" * "+blkRow+", key "+key.toString());
 			if (doSum)
@@ -200,9 +191,9 @@ public class nativeMatMult extends Configured implements Tool
 					newArgs[0] += "_sparse/CSR-r-00000";
 					newArgs[1] += "_sparse/CSC-r-00000";
 				}
-				System.out.print("Arguments: ");
-				for (int j=0 ; j<newArgs.length ; j++)
-					System.out.print(newArgs[j]+" ");
+				//System.out.print("Arguments: ");
+				//for (int j=0 ; j<newArgs.length ; j++)
+					//System.out.print(newArgs[j]+" ");
 				sparseMatMult smm = new sparseMatMult();
 				res = smm.run(newArgs);
 			}
@@ -384,7 +375,7 @@ public class nativeMatMult extends Configured implements Tool
 		Job job = new Job(conf, method+"_DenseMatrixMultiplication_"+rowLen+"_"+colLen);
 		job.setJarByClass(nativeMatMult.class);
 		
-		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputKeyClass(LongArrayWritable.class);
 		job.setMapOutputValueClass(DoubleArrayWritable.class);
 		
 		job.setOutputKeyClass(NullWritable.class);

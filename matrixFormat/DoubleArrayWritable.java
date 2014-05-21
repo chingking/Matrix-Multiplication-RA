@@ -4,53 +4,45 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.nio.ByteBuffer;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.ArrayWritable;
-import org.apache.hadoop.io.DoubleWritable;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableComparable;
 
-public class DoubleArrayWritable extends ArrayWritable implements WritableComparable<DoubleArrayWritable>
+public class DoubleArrayWritable implements WritableComparable<DoubleArrayWritable>
 { 
 	private static final Log LOG = LogFactory.getLog(DoubleArrayWritable.class);
 	//private ArrayList<DoubleWritable> values;
 	//private ArrayList<Double> values;
 	private double[] values = new double[0];
 	private int assignPosn = 0;
-	public DoubleArrayWritable() { super(DoubleWritable.class);} 
+	public DoubleArrayWritable() { } 
 	public DoubleArrayWritable(double[] input) 
 	{
-		super(DoubleWritable.class);
+		
 		values = input;
 	}
 	public DoubleArrayWritable(ArrayList<Double> input) 
 	{
-		super(DoubleWritable.class);
+		
 		values = new double[input.size()*2];
 		for (int i=0 ; i<input.size() ; i++)
 			values[i] = input.get(i);
 	}
 	public DoubleArrayWritable(DoubleArrayWritable input) 
 	{
-		super(DoubleWritable.class);
+		
 		values = input.getAll();
 	}
 	public DoubleArrayWritable(String input) 
 	{
-		super(DoubleWritable.class);
 		set(input);
 	}
 	public DoubleArrayWritable(int length) 
 	{
-		super(DoubleWritable.class);
+		
 		values = new double[length];
 		
 		//for (int i=0 ; i<length ; i++)
@@ -174,7 +166,7 @@ public class DoubleArrayWritable extends ArrayWritable implements WritableCompar
 		if (values == null)
 			values = new double[input.length];
 		ensureCapacity(input.length);
-		for (int i=0 ; i<input.length ; i++)
+		for (double i : input)
 			values[assignPosn++] = i;
 	}
 	public void add(String input)
@@ -184,13 +176,26 @@ public class DoubleArrayWritable extends ArrayWritable implements WritableCompar
 		String row[] = input.split(" ");
 		ensureCapacity(row.length);
 		//System.out.println("DoubleArrayWritable.add(): Got an input "+input.length()+", has "+row.length);
-		for (int i=0 ; i<row.length && row[i]!=" " ; i++)
+		for (String i : row)
+		{
+			//System.out.print(" "+row[i]);
+			values[assignPosn++] = Double.parseDouble(i);
+		}
+	}
+	/*Get the values from the sparese representation. e.g. "0 5.6 1 4.5 2 3.3", 5.6 4.5 3.5 are the values we will fetch */
+	public void addSparseValue(String input)
+	{
+		if (input.length() == 0)
+			return;
+		String row[] = input.split(" ");
+		ensureCapacity(row.length/2);
+		//System.out.println("DoubleArrayWritable.addSparse(): Got an input "+input.length()+", has "+row.length);
+		for (int i=1 ; i<row.length && row[i]!=" " ; i+=2)
 		{
 			//System.out.print(" "+row[i]);
 			values[assignPosn++] = Double.parseDouble(row[i]);
 		}
 	}
-	
 	public void sum(DoubleArrayWritable input)
 	{
 		if (values.length==0)
@@ -354,6 +359,8 @@ public class DoubleArrayWritable extends ArrayWritable implements WritableCompar
 	}
 	@Override
 	public int compareTo(DoubleArrayWritable arg0) {
-		return (this.length() > arg0.length())?1:0;
+		int i;
+		for (i=0 ; i<length() && i<arg0.length() && this.values[i] == arg0.get(i); i++){}
+		return (int) (this.values[i] - arg0.get(i));
 	}
 }

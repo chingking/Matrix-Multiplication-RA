@@ -6,7 +6,7 @@ import java.util.*;
 import java.io.*;
 
 public class LongDoubleMapWritable extends HashMap<Long, Double> implements Writable {
-    public LongDoubleMapWritable() { }
+    public LongDoubleMapWritable() { super();}
     //Implementation of WritableComparable
     @Override
     public void write(DataOutput out) throws IOException {
@@ -16,7 +16,6 @@ public class LongDoubleMapWritable extends HashMap<Long, Double> implements Writ
             out.writeDouble(get(k));
         }
     }
-
     @Override
     public void readFields(DataInput in) throws IOException {
         clear();
@@ -27,7 +26,6 @@ public class LongDoubleMapWritable extends HashMap<Long, Double> implements Writ
             put(k,v);
         }
     }
-
     public static LongDoubleMapWritable read(DataInput in) throws IOException 
     {
     	LongDoubleMapWritable result = new LongDoubleMapWritable();
