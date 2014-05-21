@@ -83,59 +83,51 @@ public class sparseMatMult extends Configured implements Tool
 			if (start > 0)
 				totalIO += System.currentTimeMillis() - start;
 			start = System.currentTimeMillis();
-			//boundary = key.toString().split(" ");
-			int localBoundary=0, iterBoundary=0, prevIterBoundary=0;
+			int localBoundary=0;
 			long index, indexB;
-			//for (int b=0 ; b<key.length() ; b+=2)
-			//{
+			//iterBoundary = (int) key.get(b+1);
+			if (method.compareTo("OPB") == 0)
+			{
+				// For OPB, A is CSC format, B is CSR format
+				totalComp += System.currentTimeMillis() - start;
+				start = System.currentTimeMillis();
 				localBoundary = (int) key.get(0);
-				//iterBoundary = (int) key.get(b+1);
-				if (method.compareTo("OPB") == 0)
+				for (int i=1; i<localBoundary ; i+=2)
 				{
-					// For OPB, A is CSC format, B is CSR format
-					totalComp += System.currentTimeMillis() - start;
-					start = System.currentTimeMillis();
-					//for (int i=prevIterBoundary+1; i<localBoundary ; i+=2)
-					for (int i=1; i<localBoundary ; i+=2)
+					outVal.clear();
+					index= (long) value.get(i);
+					val = value.get(i+1);
+					for (int j=localBoundary+1 ; j<value.length(); j+=2)
 					{
-						outVal.clear();
-						//indexB=value.find(boundary, value.get(i));
-						index= (long) value.get(i);
-						val = value.get(i+1);
-						//for (int j=localBoundary+1 ; j<iterBoundary; j+=2)
-						for (int j=localBoundary+1 ; j<value.length(); j+=2)
-						{
-							indexB= (long) value.get(j);
-							valB = value.get(j+1);
-							//System.out.println("SpareMap: "+index+", "+indexB+" "+(val*valB)+"("+val+"*"+valB+")");
-							outVal.put(indexB, (val*valB) );
-						}
-						//strb.append("\r\n");
-						outKey.set(index);
-						context.write(outKey, outVal);
+						indexB= (long) value.get(j);
+						valB = value.get(j+1);
+						//System.out.println("SpareMap: "+index+", "+indexB+" "+(val*valB)+"("+val+"*"+valB+")");
+						outVal.put(indexB, (val*valB) );
 					}
-				}
-				else
-				{	
-					// For IPB, A is CSR format, B is CSC format
-					totalComp += System.currentTimeMillis() - start;
-					outKey.set((long)value.get(0)); 
-					for (int i=1; i<localBoundary ; i+=2)
-					{
-						outVal.clear();
-						//indexB=value.find(boundary, value.get(i));
-						index=(int) value.get(i);
-						val = value.get(i+1);
-						valB = value.get(value.find(localBoundary+1, index));
-						outVal.put(index, (val*valB));
-						//strb.append("\r\n");
-					}
+					outKey.set(index);
 					context.write(outKey, outVal);
-					//System.out.println("Mapper.run(): "+(System.currentTimeMillis() - start)+" ms on computation\n");
-					start = System.currentTimeMillis();
 				}
-				//prevIterBoundary = iterBoundary;
-			//}
+				System.out.println("SparseMap: elasped "+(System.currentTimeMillis() - start)+" ms on computation");
+			}
+			else
+			{	
+				// For IPB, A is CSR format, B is CSC format
+				totalComp += System.currentTimeMillis() - start;
+				outKey.set((long)value.get(0)); 
+				for (int i=1; i<localBoundary ; i+=2)
+				{
+					outVal.clear();
+					//indexB=value.find(boundary, value.get(i));
+					index=(int) value.get(i);
+					val = value.get(i+1);
+					valB = value.get(value.find(localBoundary+1, index));
+					outVal.put(index, (val*valB));
+					//strb.append("\r\n");
+				}
+				context.write(outKey, outVal);
+				//System.out.println("Mapper.run(): "+(System.currentTimeMillis() - start)+" ms on computation\n");
+				start = System.currentTimeMillis();
+			}
 			//LOG.info("Mapper(): Finished");
 		}
 	}

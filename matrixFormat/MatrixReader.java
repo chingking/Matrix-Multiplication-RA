@@ -451,6 +451,7 @@ public class MatrixReader {
 	{
 		if (curAId >= blkCol)
 			return 0;
+		ST=System.currentTimeMillis();
 		key.clear();
 		value.clear();
 		Text tmpVal = new Text();
@@ -462,11 +463,15 @@ public class MatrixReader {
 			//System.out.println("getSpareOPBlock: From "+start[0]+" A ("+tmpVal.getLength()+"):"+tmpVal.toString());
 			tmpVal.clear();
 			key.add(value.length()); // used to represent the boundary between vectors in a iteration
+			readTimeA = System.currentTimeMillis()-ST;
+			ST=System.currentTimeMillis();
 			lr2.readLine(tmpVal);
 			//System.out.println("getSpareOPBlock: From "+start2[0]+" B ("+tmpVal.getLength()+"):"+tmpVal.toString());
 			value.add(tmpVal.toString());
+			readTimeB = System.currentTimeMillis()-ST;
 			//key.add(value.length()); // used to represent the boundary between iterations 
 			curAId++;
+			System.out.println("getSpareOPBlock: elapsed "+readTimeA+" ms on A, "+readTimeA+" ms on B");
 		//} while (ensureMemory() && curAId < blkCol);
 		//System.out.println("getSpareOPBlock: read "+(curAId-oldA)+" lines");
 		return 1;
