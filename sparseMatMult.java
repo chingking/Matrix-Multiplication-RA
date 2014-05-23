@@ -37,15 +37,14 @@ public class sparseMatMult extends Configured implements Tool
 	        MAP_COMPUTATION_TIME,
 	        MAP_IO_TIME 
 	}  
-	public static class Map extends Mapper<LongArrayWritable, DoubleArrayWritable, LongWritable, LongDoubleMapWritable>
+	public static class Map extends Mapper<IntArrayWritable, DoubleArrayWritable, IntWritable, IntDoubleMapWritable>
 	{
 		private static final Log LOG = LogFactory.getLog(Map.class);
 		private int blkRow, blkCol, blkBCol;
-		private String method;
-		private String boundary[];
-		private LongWritable outKey = new LongWritable();
-		private LongDoubleMapWritable outVal = new LongDoubleMapWritable();
-		private double val, valB;
+		private boolean isOPB;	// false: IPB or naive, true: OPB
+		private IntWritable outKey = new IntWritable();
+		private IntDoubleMapWritable outVal = new IntDoubleMapWritable();
+		//private double valA, valB;
 		private long start=0, totalComp=0, totalIO=0;
 		public void run(Context context) throws IOException, InterruptedException 
 		{			
@@ -66,15 +65,16 @@ public class sparseMatMult extends Configured implements Tool
 		}
 		protected void setup(Context context)
 		{
+			isOPB = (context.getConfiguration().get("method").compareTo("OPB")==0)?true:false; // false: IPB or naive, true: OPB
 			blkRow = context.getConfiguration().getInt("blkRow",0);
 			blkCol = context.getConfiguration().getInt("blkCol",0);
 			blkBCol = context.getConfiguration().getInt("blkBCol",0);
-			method = context.getConfiguration().get("method");
 			System.out.println("map(): R*C*C = "+blkRow+" * "+blkCol+" * "+blkBCol);
 		}
-		int cnt;
+		long avg=0, max=0;	
+		int cnt=0;
 		// Map is responsible for multiplying two small matrix
-		public void map(LongArrayWritable key, DoubleArrayWritable value, Context context) throws IOException, InterruptedException
+		public void map(IntArrayWritable key, DoubleArrayWritable value, Context context) throws IOException, InterruptedException
 		{
 			//System.out.println("map(): R*C = "+blkRow+" * "+blkCol+" with key "+key.toString()+", value length "+value.length());
 			//System.out.println("map(): value "+value.toString());
@@ -83,45 +83,39 @@ public class sparseMatMult extends Configured implements Tool
 			if (start > 0)
 				totalIO += System.currentTimeMillis() - start;
 			start = System.currentTimeMillis();
-			int localBoundary=0;
-			long index, indexB;
-			//iterBoundary = (int) key.get(b+1);
-			if (method.compareTo("OPB") == 0)
+			int localBoundary = key.get(0);
+			if (isOPB)
 			{
 				// For OPB, A is CSC format, B is CSR format
-				totalComp += System.currentTimeMillis() - start;
-				start = System.currentTimeMillis();
-				localBoundary = (int) key.get(0);
 				for (int i=1; i<localBoundary ; i+=2)
 				{
-					outVal.clear();
-					index= (long) value.get(i);
-					val = value.get(i+1);
-					for (int j=localBoundary+1 ; j<value.length(); j+=2)
-					{
-						indexB= (long) value.get(j);
-						valB = value.get(j+1);
-						//System.out.println("SpareMap: "+index+", "+indexB+" "+(val*valB)+"("+val+"*"+valB+")");
-						outVal.put(indexB, (val*valB) );
-					}
-					outKey.set(index);
+					outKey.set( (int) value.get(i));
+					value.multiplySparseVector(i+1, localBoundary, outVal);
 					context.write(outKey, outVal);
+					//System.out.println("SparseMap: output, "+(outKey.get())+", "+outVal.toString());
 				}
-				System.out.println("SparseMap: elasped "+(System.currentTimeMillis() - start)+" ms on computation");
+				long pt = (System.currentTimeMillis() - start);
+				if (pt > max)
+					max = pt;
+				if (pt > 2*avg)
+				{
+					System.out.println("SparseMap: elasped "+(pt)+" ms (avg: "+avg+") on computation of "+value.length()+" to output "+outVal.size());
+				}
+				avg = (avg+pt)/2;
 			}
 			else
 			{	
 				// For IPB, A is CSR format, B is CSC format
 				totalComp += System.currentTimeMillis() - start;
-				outKey.set((long)value.get(0)); 
+				outKey.set((int)value.get(0)); 
 				for (int i=1; i<localBoundary ; i+=2)
 				{
 					outVal.clear();
 					//indexB=value.find(boundary, value.get(i));
-					index=(int) value.get(i);
-					val = value.get(i+1);
-					valB = value.get(value.find(localBoundary+1, index));
-					outVal.put(index, (val*valB));
+					//index=(int) value.get(i);
+					//val = value.get(i+1);
+					//valB = value.get(value.find(localBoundary+1, value.get(i)));
+					//outVal.put( (int)value.get(i), (val*valB));
 					//strb.append("\r\n");
 				}
 				context.write(outKey, outVal);
@@ -132,33 +126,31 @@ public class sparseMatMult extends Configured implements Tool
 		}
 	}
 	
-	public static class BlockCombiner extends Reducer<LongWritable, LongDoubleMapWritable, LongWritable, LongDoubleMapWritable>
+	public static class BlockCombiner extends Reducer<IntWritable, IntDoubleMapWritable, IntWritable, IntDoubleMapWritable>
 	{
 		//private static final Log LOG = LogFactory.getLog(BlockCombiner.class);
-		private LongDoubleMapWritable output = new LongDoubleMapWritable(); 
-		private Set<Long> indices;
-		/*protected void setup(Context context)
-		{
-			LOG.info("Combiner.run(): Starting Combiner with "+Runtime.getRuntime().freeMemory()+" in "+Runtime.getRuntime().totalMemory()+" and "+Runtime.getRuntime().maxMemory());
-		}*/
-		protected void reduce(LongWritable key, Iterable<LongDoubleMapWritable> values, Context context) throws IOException, InterruptedException
+		//LOG.info("Combiner.run(): Starting Combiner with "+Runtime.getRuntime().freeMemory()+" in "+Runtime.getRuntime().totalMemory()+" and "+Runtime.getRuntime().maxMemory());
+		private IntDoubleMapWritable output = new IntDoubleMapWritable(); 
+		protected void reduce(IntWritable key, Iterable<IntDoubleMapWritable> values, Context context) throws IOException, InterruptedException
 		{
 			output.clear();		
 			//long ptime, start = System.currentTimeMillis();
-			for (LongDoubleMapWritable val : values)
+			for (IntDoubleMapWritable val : values)
 			{
-				indices = val.keySet();
-				for (Long index : indices)
+				if (output.isEmpty())
 				{
-					if (output.containsKey(index))
-					{						
-						output.put(index, output.get(index)*val.get(index));
-					}
-					else
+					output.putAll(val);
+				}
+				else
+				{
+					for (Integer index : val.keySet())
 					{
-						output.put(index, val.get(index));
-					}
-				}		
+						//if (output.containsKey(index))					
+							output.put(index, (output.get(index)==null)?val.get(index):(output.get(index)+val.get(index)));
+						//else
+							//output.put(index, val.get(index));
+					}		
+				}
 			}
 			//ptime = System.currentTimeMillis() - start;
 			//System.out.println("Reducer: "+(ptime)+" ms at Combiner");
@@ -166,19 +158,19 @@ public class sparseMatMult extends Configured implements Tool
 		}
 	}
 	
-	public static class Reduce extends Reducer<LongWritable, LongDoubleMapWritable, NullWritable, Text> 
+	public static class Reduce extends Reducer<IntWritable, IntDoubleMapWritable, NullWritable, Text> 
 	{
 		private static final Log LOG = LogFactory.getLog(Reduce.class);
 		private int blkBCol;
-		private LongDoubleMapWritable output = new LongDoubleMapWritable(); 
+		private IntDoubleMapWritable output = new IntDoubleMapWritable(); 
 		private Text finalOutput = new Text();
-		private Set<Long> indices;
+		//private Set<Long> indices;
 		protected void setup(Context context)
 		{
 			blkBCol = context.getConfiguration().getInt("blkBCol",0);
 			LOG.info("Reduce.run(): Starting Reduce with "+Runtime.getRuntime().freeMemory()+" in "+Runtime.getRuntime().totalMemory()+" and "+Runtime.getRuntime().maxMemory());
 		}
-		private String recoverRow(LongDoubleMapWritable row)
+		private String recoverRow(IntDoubleMapWritable row)
 		{
 			StringBuilder strb = new StringBuilder();
 			for (long i=0 ; i<blkBCol ; i++)
@@ -194,27 +186,25 @@ public class sparseMatMult extends Configured implements Tool
 			}
 			return strb.toString();
 		}
-		protected void reduce(LongWritable key, Iterable<LongDoubleMapWritable> values, Context context) throws IOException, InterruptedException
+		protected void reduce(IntWritable key, Iterable<IntDoubleMapWritable> values, Context context) throws IOException, InterruptedException
 		{
 			//System.out.println("reduce(): R*C = "+blkRow+" * "+blkRow+", key "+key.toString());
 			output.clear();
 			finalOutput.clear();		
 			//long ptime, start = System.currentTimeMillis();
-			for (LongDoubleMapWritable val : values)
+			for (IntDoubleMapWritable val : values)
 			{
-				finalOutput.clear();
-				indices = val.keySet();
-				for (Long index : indices)
+				if (!output.isEmpty())
 				{
-					if (output.containsKey(index))
-					{						
-						output.put(index, output.get(index)*val.get(index));
-					}
-					else
+					for (Integer index : val.keySet())
 					{
-						output.put(index, val.get(index));
-					}
-				}		
+						output.put(index, (output.get(index)==null)?val.get(index):(output.get(index)+val.get(index)));
+					}	
+				}
+				else
+				{
+					output.putAll(val);
+				}
 			}
 			//ptime = System.currentTimeMillis() - start;
 			//System.out.println("Reducer: "+(ptime)+" ms for combination");
@@ -268,8 +258,8 @@ public class sparseMatMult extends Configured implements Tool
 		
 		conf.set("mapred.create.symlink", "yes");
 		conf.set("mapred.cache.files", "hdfs:///user/king/dump.sh#dump.sh");
-		conf.set("mapred.child.java.opts",  "-Xmx"+(mem*2)+"m ");
-		conf.set("mapred.reduce.child.java.opts",  "-Xmx"+(mem*3)+"m ");
+		conf.set("mapred.child.java.opts",  "-Xmx"+(mem*2)+"m");
+		conf.set("mapred.reduce.child.java.opts",  "-Xmx"+(mem*3)+"m");
 		conf.set("method", method);
 		conf.setBoolean("Sparse", true);
 		conf.setInt("blkRow",blkRow);
@@ -280,9 +270,10 @@ public class sparseMatMult extends Configured implements Tool
 		conf.setInt("colLen",colLen);
 		conf.setInt("colBLen",colBLen);
 		
-		conf.set("io.sort.mb", mem+"");
+		conf.set("io.sort.mb", (int)(mem)+"");
 		/*Increasing "io.sort.factor" could significantly reduce the # of 'spilled records', but not significant on overall performance*/
-		conf.set("io.sort.factor", (mem/10)+"");
+		conf.set("io.sort.factor", (int)(mem*0.1)+"");
+		conf.set("io.sort.record.percent", "0.01");
 		conf.setInt("io.file.buffer.size", 65536);
 		//conf.set("io.sort.spill.percent", "0.5");
 		conf.setBoolean("mapred.compress.map.output", true);
@@ -297,15 +288,13 @@ public class sparseMatMult extends Configured implements Tool
 		//int numRe = (nBlk > nNode) ? nNode : nBlk;
 		int numRe = nNode;
 		conf.setInt("mapred.reduce.parallel.copies",numRe);
-		//conf.set("io.sort.mb", "128");
-		int good = 0;
-		//long nMap = 0;
+
 		fs.delete(new Path(args[2]),true);
 		Job job = new Job(conf, method+"_SparseMatrixMultiplication_"+rowLen+"_"+colLen+"_"+colBLen+"_"+sparseA+"_"+sparseB);
 		job.setJarByClass(nativeMatMult.class);
 		
-		job.setMapOutputKeyClass(LongWritable.class);
-		job.setMapOutputValueClass(LongDoubleMapWritable.class);
+		job.setMapOutputKeyClass(IntWritable.class);
+		job.setMapOutputValueClass(IntDoubleMapWritable.class);
 		
 		job.setOutputKeyClass(NullWritable.class);
 		job.setOutputValueClass(Text.class);
@@ -321,9 +310,8 @@ public class sparseMatMult extends Configured implements Tool
 		SparseMatrixInputFormat.addInputPath(job, new Path(args[1]));
 		TextOutputFormat.setOutputPath(job, new Path(args[2]));
 	
-		good = (job.waitForCompletion(true))?1:0;
 		//nMap = job.getCounters().findCounter("org.apache.hadoop.mapred.JobInProgress$Counter", "TOTAL_LAUNCHED_MAPS").getValue();
 
-		return good;
+		return (job.waitForCompletion(true))?1:0;
 	}
 }

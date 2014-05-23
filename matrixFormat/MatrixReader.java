@@ -333,7 +333,7 @@ public class MatrixReader {
 	private FSDataInputStream tmpFSIS;
 	private boolean isReadyLocalB = false;*/
 
-	public int getIPBlock(LongArrayWritable key, DoubleArrayWritable value) throws IOException
+	public int getIPBlock(IntArrayWritable key, DoubleArrayWritable value) throws IOException
 	{
 		key.clear();
 		value.clear(blkRow*blkCol*2);
@@ -379,7 +379,7 @@ public class MatrixReader {
 		return Runtime.getRuntime().freeMemory() > (this.bufSizeA+this.bufSizeB)*2;
 	}
 	
-	public int getOPBlock(LongArrayWritable key, DoubleArrayWritable value) throws IOException 
+	public int getOPBlock(IntArrayWritable key, DoubleArrayWritable value) throws IOException 
 	{
 		ST=System.currentTimeMillis();
 		//LOG.info("MatrixReader(): Starting fetch a block");
@@ -447,11 +447,10 @@ public class MatrixReader {
 		//System.out.println("getBlock: after second round, "+value.length());
 		return 1;
 	}
-	public int getSpareOPBlock(LongArrayWritable key, DoubleArrayWritable value) throws IOException 
+	public int getSpareOPBlock(IntArrayWritable key, DoubleArrayWritable value) throws IOException 
 	{
 		if (curAId >= blkCol)
 			return 0;
-		ST=System.currentTimeMillis();
 		key.clear();
 		value.clear();
 		Text tmpVal = new Text();
@@ -463,20 +462,16 @@ public class MatrixReader {
 			//System.out.println("getSpareOPBlock: From "+start[0]+" A ("+tmpVal.getLength()+"):"+tmpVal.toString());
 			tmpVal.clear();
 			key.add(value.length()); // used to represent the boundary between vectors in a iteration
-			readTimeA = System.currentTimeMillis()-ST;
-			ST=System.currentTimeMillis();
 			lr2.readLine(tmpVal);
 			//System.out.println("getSpareOPBlock: From "+start2[0]+" B ("+tmpVal.getLength()+"):"+tmpVal.toString());
 			value.add(tmpVal.toString());
-			readTimeB = System.currentTimeMillis()-ST;
 			//key.add(value.length()); // used to represent the boundary between iterations 
 			curAId++;
-			System.out.println("getSpareOPBlock: elapsed "+readTimeA+" ms on A, "+readTimeA+" ms on B");
 		//} while (ensureMemory() && curAId < blkCol);
 		//System.out.println("getSpareOPBlock: read "+(curAId-oldA)+" lines");
 		return 1;
 	}
-	public int getSpareIPBlock(LongArrayWritable key, DoubleArrayWritable value) throws IOException 
+	public int getSpareIPBlock(IntArrayWritable key, DoubleArrayWritable value) throws IOException 
 	{
 		if (curAId >= blkCol)
 			return 0;

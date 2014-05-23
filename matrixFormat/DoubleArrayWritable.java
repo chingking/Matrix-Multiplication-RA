@@ -258,6 +258,8 @@ public class DoubleArrayWritable implements WritableComparable<DoubleArrayWritab
 	}
 	public double[] get(int start, int len)
 	{
+		if (len == -1)
+			len = length()-start;
 		double [] out = new double[len];
 		for (int i = 0 ; i<len ; i++)
 			out[i] = values[i+start];
@@ -278,7 +280,17 @@ public class DoubleArrayWritable implements WritableComparable<DoubleArrayWritab
 	{
 		values[index] += value;
 	}
-	
+	public double multiplyEntry(int index1, int index2)
+	{
+		return values[index1]*values[index2];
+	}
+	public void multiplySparseVector(int valIndex, int boundary, IntDoubleMapWritable out)
+	{
+		out.clear();
+		double target = values[valIndex];
+		for (int i=boundary+1 ; i<length() ; i+=2)
+			out.put((int)values[i], target*values[i+1]);
+	}
 	/*Multiply two matrices store in values*/
 	public DoubleArrayWritable multiply(int blkRow, int blkCol, int blkBCol)
 	{

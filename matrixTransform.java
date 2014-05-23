@@ -107,13 +107,13 @@ public class matrixTransform  extends Configured implements Tool
 		Configuration conf = new Configuration();
 		
 		conf.set("mapred.create.symlink", "yes");
-		conf.set("mapred.child.java.opts",  "-Xmx256m ");
-		conf.set("io.sort.mb", "128");
+		conf.set("mapred.child.java.opts",  "-Xmx512m ");
+		conf.set("io.sort.mb", "256");
 		conf.setLong("io.file.buffer.size", 65536);
 		conf.setBoolean("mapred.compress.map.output", true);
 		conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.SnappyCodec");
 		conf.set("fs.hdfs.impl.disable.cache","true");
-		conf.set("mapred.reduce.slowstart.completed.maps", "0.8");
+		//conf.set("mapred.reduce.slowstart.completed.maps", "0.8");
 		conf.set("outputfilename", args[0]+".sparse");
 		conf.set("method", args[0]);
 		boolean CSR=(args[0].compareTo("OPB")==0)?true:false; //CSR: Compressed Sparse Row; otherwise, Compressed Sparse Column

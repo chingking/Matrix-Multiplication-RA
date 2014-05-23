@@ -37,7 +37,7 @@ public class nativeMatMult extends Configured implements Tool
 	        MAP_COMPUTATION_TIME,
 	        MAP_IO_TIME 
 	}  
-	public static class Map extends Mapper<LongArrayWritable, DoubleArrayWritable, LongArrayWritable, DoubleArrayWritable>
+	public static class Map extends Mapper<IntArrayWritable, DoubleArrayWritable, IntArrayWritable, DoubleArrayWritable>
 	{
 		private static final Log LOG = LogFactory.getLog(Map.class);
 		private int blkRow, blkCol, blkBCol;
@@ -77,7 +77,7 @@ public class nativeMatMult extends Configured implements Tool
 		}
 		
 		// Map is responsible for multiplying two small matrix
-		public void map(LongArrayWritable key, DoubleArrayWritable value, Context context) throws IOException, InterruptedException
+		public void map(IntArrayWritable key, DoubleArrayWritable value, Context context) throws IOException, InterruptedException
 		{
 			System.out.println("map(): R*C = "+blkRow+" * "+blkCol+" with key "+key.toString()+", value length "+value.length());
 			value.printMatrix(blkRow,blkCol,blkBCol);
@@ -111,7 +111,7 @@ public class nativeMatMult extends Configured implements Tool
 		}
 	}
 	
-	public static class Reduce extends Reducer<LongArrayWritable, DoubleArrayWritable, NullWritable, DoubleArrayWritable> 
+	public static class Reduce extends Reducer<IntArrayWritable, DoubleArrayWritable, NullWritable, DoubleArrayWritable> 
 	{
 		private static final Log LOG = LogFactory.getLog(Reduce.class);
 		private DoubleArrayWritable out = new DoubleArrayWritable(), pout = new DoubleArrayWritable();
@@ -127,7 +127,7 @@ public class nativeMatMult extends Configured implements Tool
 				doSum = true;
 			//blkCol = context.getConfiguration().getInt("blkCol",0);
 		}
-		protected void reduce(LongArrayWritable key, Iterable<DoubleArrayWritable> values, Context context) throws IOException, InterruptedException
+		protected void reduce(IntArrayWritable key, Iterable<DoubleArrayWritable> values, Context context) throws IOException, InterruptedException
 		{
 			//Runtime rt = Runtime.getRuntime();
 			//LOG.info("Reduce.run(): Starting Reduce with "+rt.freeMemory()+" in "+rt.totalMemory()+" and "+rt.maxMemory());
@@ -375,7 +375,7 @@ public class nativeMatMult extends Configured implements Tool
 		Job job = new Job(conf, method+"_DenseMatrixMultiplication_"+rowLen+"_"+colLen);
 		job.setJarByClass(nativeMatMult.class);
 		
-		job.setMapOutputKeyClass(LongArrayWritable.class);
+		job.setMapOutputKeyClass(IntArrayWritable.class);
 		job.setMapOutputValueClass(DoubleArrayWritable.class);
 		
 		job.setOutputKeyClass(NullWritable.class);

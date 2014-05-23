@@ -15,13 +15,13 @@ import org.apache.hadoop.mapreduce.lib.input.*;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.util.LineReader;
 
-public class SparseMatrixInputFormat extends FileInputFormat<LongArrayWritable, DoubleArrayWritable>
+public class SparseMatrixInputFormat extends FileInputFormat<IntArrayWritable, DoubleArrayWritable>
 {
 	private static final Log LOG = LogFactory.getLog(FileInputFormat.class);
 	private static final double SPLIT_SLOP = 1.1;   // 10% slop
 	static final String NUM_INPUT_FILES = "mapreduce.input.num.files"; // Normally, it's 2
 	
-	public RecordReader<LongArrayWritable, DoubleArrayWritable> createRecordReader(InputSplit input, TaskAttemptContext tac) throws IOException 
+	public RecordReader<IntArrayWritable, DoubleArrayWritable> createRecordReader(InputSplit input, TaskAttemptContext tac) throws IOException 
 	{
 		tac.setStatus(input.toString());
 		return new MatrixRecordReader();

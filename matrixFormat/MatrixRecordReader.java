@@ -34,7 +34,7 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.Log;
 
-public class MatrixRecordReader extends RecordReader<LongArrayWritable, DoubleArrayWritable> {
+public class MatrixRecordReader extends RecordReader<IntArrayWritable, DoubleArrayWritable> {
 
 	private static final Log LOG = LogFactory.getLog(MatrixRecordReader.class);
 	private CompressionCodecFactory compressionCodecs = null;
@@ -49,7 +49,7 @@ public class MatrixRecordReader extends RecordReader<LongArrayWritable, DoubleAr
 	//private MatrixReader in2;
 	private int maxLength;
 	private int blkID = 0;
-	private LongArrayWritable key = null;
+	private IntArrayWritable key = null;
 	private DoubleArrayWritable value = null;
 	private Seekable filePosition1;
 	private Seekable filePosition2;
@@ -156,7 +156,7 @@ public class MatrixRecordReader extends RecordReader<LongArrayWritable, DoubleAr
 
   public boolean nextKeyValue() throws IOException {
     if (key == null) {
-      key = new LongArrayWritable();
+      key = new IntArrayWritable();
     }
     
     if (value == null) {
@@ -183,7 +183,7 @@ public class MatrixRecordReader extends RecordReader<LongArrayWritable, DoubleAr
   }
 
   @Override
-  public LongArrayWritable getCurrentKey() {
+  public IntArrayWritable getCurrentKey() {
     return key;
   }
 
