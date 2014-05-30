@@ -99,7 +99,7 @@ public class SparseMatrixInputFormat extends FileInputFormat<IntArrayWritable, D
 	      }
 	      else
 	      {
-	    	  //For IPB or naive, have to use whole matrix B
+	    	  //For IPB or naive, have to use whole matrix B on each map task
 	    	  //Go through matrix B to know the total length
 	    	  while ((bytes2 = lr2.readLine(tmpText)) > 0) 
 		      {
@@ -114,7 +114,7 @@ public class SparseMatrixInputFormat extends FileInputFormat<IntArrayWritable, D
 		    	  length += bytes;
 		    	  if (bytes > conf.getInt("buffer.size.A", 0)) 
 		        		conf.setInt("buffer.size.A", (int)bytes);
-		          if (numLines == (blkCol)) {
+		          if (numLines == (blkRow)) {
 		        	splits.add(createFileSplit(nslot++, p1, begin, length, p2, begin2, length2));
 		            begin += length;
 		            length = 0;

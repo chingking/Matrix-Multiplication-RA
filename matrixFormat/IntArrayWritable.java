@@ -109,26 +109,28 @@ public class IntArrayWritable implements WritableComparable<IntArrayWritable>
 
 	@Override
 	public void readFields(DataInput in) throws IOException {
-		int size = WritableUtils.readVInt(in);
+		int size = in.readInt();
 		values = new int[size];
 		for (int i = 0; i <size ; i++)
 		{
-		    values[i] = WritableUtils.readVInt(in);                          // store it in values
+		    values[i] = in.readInt();                          // store it in values
 		}
 		this.assignPosn = size;
 	}
 
 	@Override
 	public void write(DataOutput out) throws IOException {
-		WritableUtils.writeVInt(out, this.length());                 // write values
+		out.writeInt(this.length());                 // write values
 	    for (int i = 0; i < this.length(); i++) {
-	    	WritableUtils.writeVInt(out, values[i]);
+	    	out.writeInt(values[i]);
 	    }
 	}
 	@Override
 	public int compareTo(IntArrayWritable arg0) {
 		int i;
 		for (i=0 ; i<length() && i<arg0.length() && this.values[i] == arg0.get(i); i++){}
+		if (i>0)
+			i--;
 		return (int) (this.values[i] - arg0.get(i));
 	}
 

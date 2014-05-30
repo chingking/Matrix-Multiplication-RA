@@ -7,37 +7,69 @@ import java.io.*;
 
 /*Customized efficient (storage & computation) data type to store Sparse matrix*/
 public class IntDoubleMapWritable extends HashMap<Integer, Double> implements WritableComparable<IntDoubleMapWritable> {
-	
-    public IntDoubleMapWritable() {}
-    
-	public void summation(IntDoubleMapWritable input)
+	public IntDoubleMapWritable() {}
+    public IntDoubleMapWritable(int initCapacity)
+    {
+    	super(initCapacity);
+    }
+    public IntDoubleMapWritable(int initCapacity, float loadFactor)
+    {
+    	super(initCapacity,loadFactor);
+    }
+    public IntDoubleMapWritable(IntDoubleMapWritable input)
+    {
+    	super(input);
+    }
+	public void allMultiply(double val)
+    {
+    	//System.out.println("IntDoubleMapWritable: "+val+" * "+this.toString());
+    	for (Map.Entry<Integer, Double> entry : entrySet())
+    	{
+    		entry.setValue(val*entry.getValue().doubleValue());
+    		//put(entry.getKey(), val*entry.getValue().doubleValue());
+    	}
+    	//System.out.println("IntDoubleMapWritable: Become "+this.toString());
+    }
+	public void addition(IntDoubleMapWritable input)
 	{
-		Set<Integer> targetIndices = input.keySet();
-		for (Integer index : targetIndices)
+		//System.out.println("IntDoubleMapWritable: Add ("+input.size()+")"+input.toString());
+		//System.out.println("IntDoubleMapWritable: To ("+size()+")"+this.toString());
+		for (Map.Entry<Integer, Double> entry : input.entrySet())
 		{
-			if (this.containsKey(index))
-				this.put(index, this.get(index)+input.get(index));
+			Integer k = entry.getKey();
+			if (this.containsKey(k))
+			{
+				//System.out.print("IntDoubleMapWritable: Found duplicate column "+k+" from "+get(k).doubleValue()+" to add "+entry.getValue().doubleValue()+" to be ");
+				this.put(k, this.get(k).doubleValue()+entry.getValue().doubleValue());
+				//System.out.println(get(k).doubleValue());
+			}
 			else
-				this.put(index, input.get(index));
+				this.put(k, entry.getValue());
 		}
+		//System.out.println("IntDoubleMapWritable: Become ("+size()+")"+this.toString());
 	}
+
 	public String toString()
 	{
-		String str = new String(); 
-		for (Integer k : keySet()) {
-			str += ("<"+k+","+get(k)+">, ");
+		String strb = new String(); 
+		for (Map.Entry<Integer, Double> entry : entrySet()) {
+			strb += ("<"+entry.getKey().intValue()+","+entry.getValue().doubleValue()+">, ");
         }
-		return str;
+		return strb;
 	}
-    
-    //Implementation of WritableComparable
+    public long ftime=0, time=0;
+	//Implementation of WritableComparable
     @Override
     public void write(DataOutput out) throws IOException {
-    	WritableUtils.writeVInt(out, size());
-        for (Integer k : keySet()) {
-        	WritableUtils.writeVInt(out,k);
-        	out.writeDouble(get(k));
-        }
+    	long start = System.currentTimeMillis();
+		WritableUtils.writeVInt(out, size());
+		for (Map.Entry<Integer,Double> entry : entrySet())
+		{
+			WritableUtils.writeVInt(out, entry.getKey());
+			out.writeDouble(entry.getValue());
+		}
+		//System.out.println("Took "+(System.currentTimeMillis()-start)+" ms to write");
+		time+=System.currentTimeMillis()-start;
     }
     @Override
     public void readFields(DataInput in) throws IOException {
@@ -57,7 +89,7 @@ public class IntDoubleMapWritable extends HashMap<Integer, Double> implements Wr
 	@Override
 	public int compareTo(IntDoubleMapWritable arg0) 
 	{
-		/*	int comp=0;
+		int comp=0;
 		for (Integer index : keySet())
 		{
 			if (!arg0.containsKey(index))
@@ -69,7 +101,7 @@ public class IntDoubleMapWritable extends HashMap<Integer, Double> implements Wr
 				comp += (int)(this.get(index) - arg0.get(index));
 			}
 		}
-		return comp;*/
-		return 0; //Sorting is not required
+		return comp;
+		//return 0; //Sorting is not required
 	}
 }

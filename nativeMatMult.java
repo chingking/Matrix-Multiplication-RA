@@ -11,7 +11,6 @@ import org.apache.hadoop.io.*;
 import org.apache.hadoop.mapreduce.*;
 import org.apache.hadoop.util.*;
 
-
 import matrixFormat.*;
 
 /*
@@ -80,7 +79,7 @@ public class nativeMatMult extends Configured implements Tool
 		public void map(IntArrayWritable key, DoubleArrayWritable value, Context context) throws IOException, InterruptedException
 		{
 			System.out.println("map(): R*C = "+blkRow+" * "+blkCol+" with key "+key.toString()+", value length "+value.length());
-			value.printMatrix(blkRow,blkCol,blkBCol);
+			//value.printMatrix(blkRow,blkCol,blkBCol);
 			//blkRow = (value.length()/2)/blkCol;
 			//System.out.println("map(): value "+value.toString());
 			//LOG.info("Mapper(): Starting processing "+(cnt++)+" th record with key "+key.toString()+", value length "+value.length());
@@ -166,39 +165,45 @@ public class nativeMatMult extends Configured implements Tool
 	{
 		if (args.length < 5)
 		{
-			System.out.println("hadoop jar nativeMatMult.jar nativeMatMult <Matrix A> <Matrix B> <Output directory> <Row length of A> <Column/Row length of A/B> <Column length of B> <Sparsity of A> <Sparsity of B> <Method: naive, IPB, OPB> <Memory> <# of slots>");
+			System.out.println("hadoop jar nativeMatMult.jar nativeMatMult -libjars <user-defined zip/jar files> <Matrix A> <Matrix B> <Output directory> <Row length of A> <Column/Row length of A/B> <Column length of B> <Sparsity of A> <Sparsity of B> <Method: naive, IPB, OPB> <Memory> <# of slots>");
 			return;
 		}
+		System.out.print("Arguments: ");
+		for (int i=0 ; i<args.length;i++)
+			System.out.print(args[i]+", ");
+		System.out.println("");
+		/*String []newArgs = new String[args.length-2];
+		System.arraycopy(args, 2, newArgs, 0, newArgs.length);
+		System.out.print("\r\n New Arguments: ");
+		for (int i=0 ; i<newArgs.length;i++)
+			System.out.print(newArgs[i]+", ");*/
 		int res=0;
 		//Do it multiple times to get average result
 		for (int i=0 ; i<1; i++)
 		{
 			long ptime, start = System.currentTimeMillis();
 			// Transform Sparse matrix first
-			if ( Integer.parseInt(args[6]) > 0)
+			Configuration conf = new Configuration();
+			if ( Integer.parseInt(args[8]) > 0)
 			{
-				String []newArgs = args;
 				matrixTransform mt = new matrixTransform();
-				String path[]={args[8], args[0], args[1]}; //First entry is <Method: IPB or OPB>, following two are path of matrices
+				String path[]={args[10], args[2], args[3]}; //First entry is <Method: IPB or OPB>, following two are path of matrices
 				mt.run(path);
-				if (args[8].compareTo("OPB") == 0)
+				if (args[10].compareTo("OPB") == 0)
 				{
-					newArgs[0] += "_sparse/CSC-r-00000";
-					newArgs[1] += "_sparse/CSR-r-00000";
+					args[2] += "_sparse/CSC-r-00000";
+					args[3] += "_sparse/CSR-r-00000";
 				}
 				else
 				{
-					newArgs[0] += "_sparse/CSR-r-00000";
-					newArgs[1] += "_sparse/CSC-r-00000";
+					args[2] += "_sparse/CSR-r-00000";
+					args[3] += "_sparse/CSC-r-00000";
 				}
-				//System.out.print("Arguments: ");
-				//for (int j=0 ; j<newArgs.length ; j++)
-					//System.out.print(newArgs[j]+" ");
-				sparseMatMult smm = new sparseMatMult();
-				res = smm.run(newArgs);
+				res = ToolRunner.run(conf, new sparseMatMult(), args);
+				//smm.run(newArgs);
 			}
 			else
-				res = ToolRunner.run(new Configuration(), new nativeMatMult(), args);
+				res = ToolRunner.run(conf, new nativeMatMult(), args);
 			ptime = System.currentTimeMillis() - start;
 			System.out.print((ptime/1000)+" ");
 		}
@@ -259,7 +264,7 @@ public class nativeMatMult extends Configured implements Tool
 					estMemUsedinMap = blkRow*blkCol+blkCol*blkBCol+blkRow*blkBCol;
 					estMemUsedinReduce = blkRow*blkBCol*slots;
 				}
-				blkRow=blkBCol=50;
+				//blkRow=blkBCol=50;
 				if (blkCol*(slots-1) > colLen)
 					slots--;
 				System.out.println("Master: esitmated block size is "+blkRow+" * "+blkCol+" * "+blkBCol+"for possible memory-constrained "+avaMemMap);
@@ -344,6 +349,7 @@ public class nativeMatMult extends Configured implements Tool
 		conf.set("io.sort.mb", mem+"");
 		/*Increasing "io.sort.factor" could significantly reduce the # of 'spilled records', but not significant on overall performance*/
 		conf.set("io.sort.factor", (mem/10)+"");
+		conf.set("io.sort.record.percent", "0.01");
 		conf.setInt("io.file.buffer.size", 65536);
 		//conf.set("io.sort.spill.percent", "0.5");
 		conf.setBoolean("mapred.compress.map.output", true);

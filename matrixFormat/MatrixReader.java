@@ -376,7 +376,7 @@ public class MatrixReader {
 	{
 		//System.out.println("ensureMemory: free "+Runtime.getRuntime().freeMemory()+", total "+Runtime.getRuntime().totalMemory()+", max "+Runtime.getRuntime().maxMemory());
 		//System.out.println("to be used: "+(this.bufSizeA+this.bufSizeB));
-		return Runtime.getRuntime().freeMemory() > (this.bufSizeA+this.bufSizeB)*2;
+		return Runtime.getRuntime().freeMemory() > (this.bufSizeA+this.bufSizeB)*10;
 	}
 	
 	public int getOPBlock(IntArrayWritable key, DoubleArrayWritable value) throws IOException 
@@ -447,16 +447,16 @@ public class MatrixReader {
 		//System.out.println("getBlock: after second round, "+value.length());
 		return 1;
 	}
+	private Text tmpVal = new Text();
 	public int getSpareOPBlock(IntArrayWritable key, DoubleArrayWritable value) throws IOException 
 	{
 		if (curAId >= blkCol)
 			return 0;
 		key.clear();
 		value.clear();
-		Text tmpVal = new Text();
-		/*int oldA=curAId;
-		do
-		{*/
+		int oldA=curAId;
+		//do
+		//{
 			lr.readLine(tmpVal);
 			value.add(tmpVal.toString());
 			//System.out.println("getSpareOPBlock: From "+start[0]+" A ("+tmpVal.getLength()+"):"+tmpVal.toString());
@@ -477,9 +477,12 @@ public class MatrixReader {
 			return 0;
 		key.clear();
 		value.clear();
-		Text tmpVal = new Text();
-		lr.readLine(tmpVal);
-		value.set(tmpVal.toString());
+		if ( curAVal.length() == 0 )
+		{
+			lr.readLine(tmpVal);
+			curAVal.set(tmpVal.toString());
+		}
+		value.set(curAVal);
 		tmpVal.clear();
 		key.add(value.length()); // used to represent the boundary between two vector
 		lr2.readLine(tmpVal);
@@ -489,6 +492,7 @@ public class MatrixReader {
 		{
 			curBId=0;
 			curAId++;
+			curAVal.clear();
 			in2.seek(0);
 			lr2 = new LineReader(in2);
 		}

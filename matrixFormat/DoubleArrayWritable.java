@@ -9,6 +9,7 @@ import java.util.Arrays;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.WritableComparable;
 
 public class DoubleArrayWritable implements WritableComparable<DoubleArrayWritable>
@@ -227,6 +228,7 @@ public class DoubleArrayWritable implements WritableComparable<DoubleArrayWritab
 		//values =  new ArrayList<Double>();
 		values = new double[0];
 		assignPosn = 0;
+		baseVal = null;
 	}
 	public void clear(int length)
 	{
@@ -284,12 +286,31 @@ public class DoubleArrayWritable implements WritableComparable<DoubleArrayWritab
 	{
 		return values[index1]*values[index2];
 	}
-	public void multiplySparseVector(int valIndex, int boundary, IntDoubleMapWritable out)
+	private IntDoubleMapWritable baseVal;
+	public void setBaseVal(int boundary)
 	{
-		out.clear();
-		double target = values[valIndex];
+		if (baseVal == null)
+			baseVal = new IntDoubleMapWritable((length()-boundary-1)/2, 1.0f);
+		baseVal.clear();
 		for (int i=boundary+1 ; i<length() ; i+=2)
-			out.put((int)values[i], target*values[i+1]);
+			baseVal.put((int)values[i], values[i+1]);
+	}
+	public void multiplyOPBSparseVector(int valIndex, int boundary, IntWritable key, IntDoubleMapWritable val)
+	{
+		val.clear();
+		val.putAll(baseVal);
+		key.set((int)values[valIndex-1]);
+		double target = values[valIndex];
+		val.allMultiply(target);
+		//for (int i=boundary+1 ; i<length() ; i+=2)
+			//val.put((int)values[i], target*values[i+1]);
+	}
+	public void multiplyIPBSparseVector(int valIndex, IntDoubleMapWritable val)
+	{
+		if (baseVal.containsKey(valIndex))
+		{
+			val.put(valIndex, baseVal.get(valIndex)*values[valIndex+1]);
+		}
 	}
 	/*Multiply two matrices store in values*/
 	public DoubleArrayWritable multiply(int blkRow, int blkCol, int blkBCol)

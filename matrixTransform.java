@@ -47,14 +47,12 @@ public class matrixTransform  extends Configured implements Tool
 			}
 			else
 			{
-				String out = new String();
 				for (int i=1 ; i<row.length ; i++)
 				{
 					if (row[i].compareTo("0") != 0)
 					{
-						out = rowID+" "+row[i]+" ";
 						key.set(i-1);
-						output.set(out+"");
+						output.set(rowID+" "+row[i]+" ");
 						context.write(key, output);
 					}
 				}
@@ -107,8 +105,9 @@ public class matrixTransform  extends Configured implements Tool
 		Configuration conf = new Configuration();
 		
 		conf.set("mapred.create.symlink", "yes");
-		conf.set("mapred.child.java.opts",  "-Xmx512m ");
-		conf.set("io.sort.mb", "256");
+		conf.set("mapred.child.java.opts",  "-Xmx768m ");
+		conf.set("io.sort.mb", "384");
+		conf.set("io.sort.spill.percent", "0.9");
 		conf.setLong("io.file.buffer.size", 65536);
 		conf.setBoolean("mapred.compress.map.output", true);
 		conf.set("mapred.map.output.compression.codec", "org.apache.hadoop.io.compress.SnappyCodec");
@@ -116,9 +115,16 @@ public class matrixTransform  extends Configured implements Tool
 		//conf.set("mapred.reduce.slowstart.completed.maps", "0.8");
 		conf.set("outputfilename", args[0]+".sparse");
 		conf.set("method", args[0]);
-		boolean CSR=(args[0].compareTo("OPB")==0)?true:false; //CSR: Compressed Sparse Row; otherwise, Compressed Sparse Column
+		boolean CSR=(args[0].compareTo("OPB")==0)?true:false; //If second matrix to be CSR ? ; CSR: Compressed Sparse Row; otherwise, Compressed Sparse Column
 		//Generally, CSR require less time to complete. Therefore, submit CSR job first, then immediately submit CSC job
 		conf.setBoolean("CSR",CSR);
+		if (!CSR)
+		{
+			String tmp = args[1];
+			args[1] = args[2];
+			args[2] = tmp;
+			CSR = !CSR;
+		}
 		int good = 0;
 		for (int i=args.length-1 ; i>0 ; i--)
 		{
