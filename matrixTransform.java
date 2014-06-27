@@ -19,6 +19,9 @@ import org.apache.hadoop.util.Tool;
 
 public class matrixTransform  extends Configured implements Tool 
 {
+	public static enum MatrixEntryCounters {
+        NUMBEROFENTRIES
+	} 
 	public static class Map extends Mapper<LongWritable, Text, LongWritable, Text>
 	{
 		boolean CSR;
@@ -40,6 +43,7 @@ public class matrixTransform  extends Configured implements Tool
 					if (row[i].compareTo("0") != 0)
 					{
 						out.append((i-1)+" "+row[i]+" ");
+						context.getCounter(MatrixEntryCounters.NUMBEROFENTRIES).increment(1); 
 					}
 				}
 				output.set(out.toString());
@@ -53,6 +57,7 @@ public class matrixTransform  extends Configured implements Tool
 					{
 						key.set(i-1);
 						output.set(rowID+" "+row[i]+" ");
+						context.getCounter(MatrixEntryCounters.NUMBEROFENTRIES).increment(1); 
 						context.write(key, output);
 					}
 				}

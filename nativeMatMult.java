@@ -168,11 +168,11 @@ public class nativeMatMult extends Configured implements Tool
 			System.out.println("hadoop jar nativeMatMult.jar nativeMatMult -libjars <user-defined zip/jar files> <Matrix A> <Matrix B> <Output directory> <Row length of A> <Column/Row length of A/B> <Column length of B> <Sparsity of A> <Sparsity of B> <Method: naive, IPB, OPB> <Memory> <# of slots>");
 			return;
 		}
-		System.out.print("Arguments: ");
+		/*System.out.print("Arguments: ");
 		for (int i=0 ; i<args.length;i++)
 			System.out.print(args[i]+", ");
 		System.out.println("");
-		/*String []newArgs = new String[args.length-2];
+		String []newArgs = new String[args.length-2];
 		System.arraycopy(args, 2, newArgs, 0, newArgs.length);
 		System.out.print("\r\n New Arguments: ");
 		for (int i=0 ; i<newArgs.length;i++)

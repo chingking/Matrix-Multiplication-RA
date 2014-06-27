@@ -287,29 +287,37 @@ public class DoubleArrayWritable implements WritableComparable<DoubleArrayWritab
 		return values[index1]*values[index2];
 	}
 	private IntDoubleMapWritable baseVal;
-	public void setBaseVal(int boundary)
+	public void setBaseSparseVal(int boundary)
 	{
 		if (baseVal == null)
-			baseVal = new IntDoubleMapWritable((length()-boundary-1)/2, 1.0f);
+			baseVal = new IntDoubleMapWritable((length()-boundary-1)/2);
 		baseVal.clear();
 		for (int i=boundary+1 ; i<length() ; i+=2)
 			baseVal.put((int)values[i], values[i+1]);
+		//System.out.println("BaseVal: "+baseVal.toString());
 	}
+	public long copyTime=0, multTime=0;
 	public void multiplyOPBSparseVector(int valIndex, int boundary, IntWritable key, IntDoubleMapWritable val)
 	{
-		val.clear();
-		val.putAll(baseVal);
+		//val.clear();
+		long start = System.currentTimeMillis();
+		val.copy(baseVal);
+		copyTime+=(System.currentTimeMillis()-start);
+		start = System.currentTimeMillis();
 		key.set((int)values[valIndex-1]);
-		double target = values[valIndex];
-		val.allMultiply(target);
-		//for (int i=boundary+1 ; i<length() ; i+=2)
-			//val.put((int)values[i], target*values[i+1]);
+		val.allMultiply(values[valIndex]);
+		multTime+=(System.currentTimeMillis()-start);
 	}
 	public void multiplyIPBSparseVector(int valIndex, IntDoubleMapWritable val)
 	{
-		if (baseVal.containsKey(valIndex))
+		if (baseVal.findKey(valIndex) >= 0)
 		{
-			val.put(valIndex, baseVal.get(valIndex)*values[valIndex+1]);
+			int index;
+			if ((index = val.findKey(valIndex)) >= 0)
+				val.singleAdd(index, (baseVal.get(valIndex)*values[valIndex+1]));
+				//val.put(valIndex, val.get(valIndex)+(baseVal.get(valIndex)*values[valIndex+1]));
+			else
+				val.put(valIndex, baseVal.get(valIndex)*values[valIndex+1]);
 		}
 	}
 	/*Multiply two matrices store in values*/
